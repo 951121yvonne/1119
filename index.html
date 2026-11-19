@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chat Sour - 日常行程安排與日曆助理</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        sour: {
+                            purple: '#A09ABC',
+                            light: '#E1DEE9',
+                            bgLight: '#F7F5FA',
+                            lemon: '#F4D068',
+                            lemonHover: '#E5C055',
+                            darkBg: '#181622',
+                            darkCard: '#242034',
+                            darkText: '#E6E4EE'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter & Noto Sans TC -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Marked.js for Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+        }
+        .chat-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .chat-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .chat-scroll::-webkit-scrollbar-thumb {
+            background-color: rgba(160, 154, 188, 0.4);
+            border-radius: 9999px;
+        }
+        @keyframes subtle-bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-3px); }
+        }
+        .lemon-bounce {
+            animation: subtle-bounce 3s infinite ease-in-out;
+        }
+        .recording-pulse {
+            animation: pulse-ring 1.5s infinite;
+        }
+        @keyframes pulse-ring {
+            0% { box-shadow: 0 0 0 0 rgba(244, 208, 104, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(244, 208, 104, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(244, 208, 104, 0); }
+        }
+        /* Markdown generated content styling */
+        .message-content p { margin-bottom: 0.5rem; }
+        .message-content p:last-child { margin-bottom: 0; }
+        .message-content ul, .message-content ol { padding-left: 1.25rem; margin-bottom: 0.5rem; }
+        .message-content ul { list-style-type: disc; }
+        .message-content ol { list-style-type: decimal; }
+        .message-content strong { font-weight: 600; color: inherit; }
+    </style>
+</head>
+<body class="h-[100dvh] bg-[#F7F5FA] dark:bg-[#181622] text-gray-800 dark:text-[#E6E4EE] transition-colors duration-200 flex flex-col md:flex-row overflow-hidden">
+
+    <!-- Left Sidebar (Desktop Branding & Settings) -->
+    <aside class="hidden md:flex md:w-80 lg:w-96 bg-[#E1DEE9] dark:bg-[#242034] p-6 flex-col justify-between border-r border-[#A09ABC]/20 shadow-sm z-10">
+        <div>
+            <!-- Desktop Header & Avatar -->
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-16 h-16 rounded-full bg-[#F4D068] flex items-center justify-center shadow-md relative lemon-bounce flex-shrink-0 border-2 border-white dark:border-gray-700">
+                    <svg width="46" height="46" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <ellipse cx="50" cy="52" rx="42" ry="36" fill="#F4D068" />
+                        <path d="M7 52 C3 48 3 56 7 52 Z" fill="#F4D068" />
+                        <path d="M93 52 C97 48 97 56 93 52 Z" fill="#F4D068" />
+                        <path d="M48 16 Q52 4 64 8 Q56 20 48 16 Z" fill="#7CB342" />
+                        <circle cx="38" cy="48" r="3.5" fill="#2C2C2C" />
+                        <circle cx="62" cy="48" r="3.5" fill="#2C2C2C" />
+                        <ellipse cx="32" cy="54" rx="4" ry="2.5" fill="#F08080" opacity="0.6" />
+                        <ellipse cx="68" cy="54" rx="4" ry="2.5" fill="#F08080" opacity="0.6" />
+                        <path d="M 46 54 Q 50 58 54 54" stroke="#2C2C2C" stroke-width="2.5" stroke-linecap="round" fill="none" />
+                    </svg>
+                    <span class="absolute bottom-0 right-0 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></span>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-[#4A4458] dark:text-purple-200 tracking-wide">CHAT SOUR</h1>
+                    <p class="text-xs text-gray-600 dark:text-gray-400 font-medium">日常行程安排與日曆助理</p>
+                </div>
+            </div>
+
+            <div class="bg-white/60 dark:bg-black/25 backdrop-blur-sm p-4 rounded-xl mb-6 text-sm leading-relaxed border border-white/40 dark:border-gray-700/50">
+                <p class="font-semibold text-[#A09ABC] dark:text-purple-300 mb-1 flex items-center gap-2">
+                    <i class="fa-solid fa-lemon text-[#F4D068]"></i> 關於助理 Sour
+                </p>
+                <p class="text-gray-600 dark:text-gray-300 text-xs">
+                    我是理性又貼心的檸檬助理 **Sour**！不僅能幫您規劃行程，還能一鍵將排程同步至 Google 日曆。
+                </p>
+            </div>
+
+            <!-- Global Controls Panel -->
+            <div class="space-y-4">
+                <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">偏好與日曆捷徑</h3>
+                
+                <!-- Calendar Quick Link Button -->
+                <a href="https://calendar.google.com" target="_blank" class="w-full flex items-center justify-center gap-2 bg-[#F4D068] hover:bg-[#E5C055] text-gray-900 font-semibold py-2 px-3 rounded-lg text-xs transition shadow-sm">
+                    <i class="fa-regular fa-calendar-days"></i> 開啟 Google 日曆總覽
+                </a>
+
+                <!-- Language Selector -->
+                <div class="flex items-center justify-between text-sm bg-white/40 dark:bg-black/30 p-2.5 rounded-lg">
+                    <label class="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                        <i class="fa-solid fa-globe text-[#A09ABC]"></i> 回覆語言
+                    </label>
+                    <select id="languageSelect" onchange="changeLanguage()" class="bg-white dark:bg-gray-800 text-xs font-medium px-2 py-1.5 rounded border border-gray-300 dark:border-gray-600 outline-none focus:ring-2 focus:ring-[#A09ABC]">
+                        <option value="繁體中文">繁體中文</option>
+                        <option value="English">English</option>
+                        <option value="日本語">日本語</option>
+                        <option value="한국어">한국어</option>
+                    </select>
+                </div>
+
+                <!-- Dark / Light Mode -->
+                <div class="flex items-center justify-between text-sm bg-white/40 dark:bg-black/30 p-2.5 rounded-lg">
+                    <span class="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                        <i class="fa-solid fa-moon text-[#A09ABC]" id="themeIcon"></i> 深色模式
+                    </span>
+                    <button onclick="toggleDarkMode()" class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-300 dark:bg-[#A09ABC] transition-colors focus:outline-none">
+                        <span id="themeToggleBall" class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-1 dark:translate-x-6"></span>
+                    </button>
+                </div>
+
+                <!-- Font Size Adjustment -->
+                <div class="flex items-center justify-between text-sm bg-white/40 dark:bg-black/30 p-2.5 rounded-lg">
+                    <span class="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                        <i class="fa-solid fa-font text-[#A09ABC]"></i> 文字大小
+                    </span>
+                    <div class="flex items-center gap-1 bg-white dark:bg-gray-800 rounded border border-gray-300 dark:border-gray-600 p-0.5">
+                        <button onclick="adjustFontSize(-1)" class="w-7 h-6 flex items-center justify-center text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded" title="縮小">A-</button>
+                        <button onclick="resetFontSize()" class="px-1.5 h-6 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded" title="重置">重置</button>
+                        <button onclick="adjustFontSize(1)" class="w-7 h-6 flex items-center justify-center text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded font-bold" title="放大">A+</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center border-t border-gray-300/40 dark:border-gray-700 pt-3">
+            <p class="text-[11px] text-gray-500 dark:text-gray-400">
+                Chat Sour 整合 Google Calendar 快捷服務。
+            </p>
+        </div>
+    </aside>
+
+    <!-- Main Chat Window -->
+    <main class="flex-1 flex flex-col h-full bg-[#F7F5FA] dark:bg-[#181622] relative overflow-hidden">
+        
+        <!-- Mobile Header Bar -->
+        <header class="bg-[#E1DEE9] dark:bg-[#242034] p-3.5 px-4 border-b border-[#A09ABC]/20 flex items-center justify-between flex-shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-[#F4D068] flex items-center justify-center shadow-sm relative flex-shrink-0">
+                    <svg width="30" height="30" viewBox="0 0 100 100" fill="none">
+                        <ellipse cx="50" cy="52" rx="42" ry="36" fill="#F4D068" />
+                        <path d="M48 16 Q52 4 64 8 Q56 20 48 16 Z" fill="#7CB342" />
+                        <circle cx="38" cy="48" r="3.5" fill="#2C2C2C" />
+                        <circle cx="62" cy="48" r="3.5" fill="#2C2C2C" />
+                        <path d="M 46 54 Q 50 58 54 54" stroke="#2C2C2C" stroke-width="2.5" stroke-linecap="round" fill="none" />
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="font-bold text-gray-800 dark:text-white text-base leading-tight">Chat Sour</h2>
+                    <p class="text-[11px] text-gray-500 dark:text-gray-400">日常行程與日曆助理</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 md:hidden">
+                <a href="https://calendar.google.com" target="_blank" class="p-2 text-gray-600 dark:text-gray-300 rounded-full hover:bg-black/5 dark:hover:bg-white/10" title="開啟 Google 日曆">
+                    <i class="fa-regular fa-calendar-days text-sm"></i>
+                </a>
+                <button onclick="toggleDarkMode()" class="p-2 text-gray-600 dark:text-gray-300 rounded-full hover:bg-black/5 dark:hover:bg-white/10" title="切換主題">
+                    <i class="fa-solid fa-circle-half-stroke" id="mobileThemeIcon"></i>
+                </button>
+                <button onclick="openMobileMenu()" class="p-2 text-gray-600 dark:text-gray-300 rounded-full hover:bg-black/5 dark:hover:bg-white/10" title="選單設定">
+                    <i class="fa-solid fa-sliders"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- System Status Bar -->
+        <div id="statusBar" class="bg-[#A09ABC]/10 dark:bg-purple-900/20 text-[#A09ABC] dark:text-purple-300 px-4 py-1.5 text-xs text-center border-b border-[#A09ABC]/10 flex items-center justify-center gap-2 transition-all">
+            <span class="w-2 h-2 rounded-full bg-green-500 inline-block" id="statusDot"></span>
+            <span id="statusText">系統就緒 (支援日曆一鍵同步)</span>
+        </div>
+
+        <!-- Chat Messages Container -->
+        <div id="chatContainer" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 chat-scroll text-sm" style="font-size: 15px;">
+            
+            <!-- Quick Prompts Buttons -->
+            <div id="quickButtonsContainer" class="flex flex-wrap gap-2 my-2 justify-center transition-all duration-300">
+                <button onclick="sendQuickMessage('【一日遊行程規劃】請幫我規劃台北陽明山加士林夜市一日遊，並產生加入日曆按鈕')" class="bg-white dark:bg-[#242034] text-[#A09ABC] dark:text-purple-300 border border-[#A09ABC]/30 hover:bg-[#E1DEE9]/50 dark:hover:bg-purple-900/30 px-3 py-1.5 rounded-full text-xs font-medium transition shadow-sm flex items-center gap-1.5">
+                    <i class="fa-solid fa-compass text-[#F4D068]"></i> 【一日遊行程規劃】
+                </button>
+                <button onclick="sendQuickMessage('【商務會議時間折衷】團隊有兩派時間意見，請幫忙協調時間衝突')" class="bg-white dark:bg-[#242034] text-[#A09ABC] dark:text-purple-300 border border-[#A09ABC]/30 hover:bg-[#E1DEE9]/50 dark:hover:bg-purple-900/30 px-3 py-1.5 rounded-full text-xs font-medium transition shadow-sm flex items-center gap-1.5">
+                    <i class="fa-solid fa-handshake text-[#F4D068]"></i> 【商務會議時間折衷】
+                </button>
+                <button onclick="sendQuickMessage('【新增行事曆範例】幫我在明天下午兩點安排「專案檢討會議」')" class="bg-white dark:bg-[#242034] text-[#A09ABC] dark:text-purple-300 border border-[#A09ABC]/30 hover:bg-[#E1DEE9]/50 dark:hover:bg-purple-900/30 px-3 py-1.5 rounded-full text-xs font-medium transition shadow-sm flex items-center gap-1.5">
+                    <i class="fa-regular fa-calendar-plus text-[#F4D068]"></i> 【新增行事曆範例】
+                </button>
+            </div>
+
+            <!-- Initial Greeting Message -->
+            <div class="flex items-start gap-3 msg-assistant">
+                <div class="w-9 h-9 rounded-full bg-[#F4D068] flex items-center justify-center shadow-sm flex-shrink-0 mt-0.5">
+                    <svg width="24" height="24" viewBox="0 0 100 100" fill="none">
+                        <ellipse cx="50" cy="52" rx="42" ry="36" fill="#F4D068" />
+                        <path d="M48 16 Q52 4 64 8 Q56 20 48 16 Z" fill="#7CB342" />
+                        <circle cx="38" cy="48" r="3.5" fill="#2C2C2C" />
+                        <circle cx="62" cy="48" r="3.5" fill="#2C2C2C" />
+                        <path d="M 46 54 Q 50 58 54 54" stroke="#2C2C2C" stroke-width="2.5" stroke-linecap="round" fill="none" />
+                    </svg>
+                </div>
+                <div class="group relative max-w-[85%] md:max-w-[75%] bg-white dark:bg-[#242034] p-3.5 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 dark:border-gray-700/50">
+                    <div class="font-bold text-xs text-[#A09ABC] dark:text-purple-300 mb-1 flex items-center justify-between">
+                        <span>Sour</span>
+                    </div>
+                    <div class="message-content leading-relaxed text-gray-800 dark:text-gray-200">
+                        哈囉！我是您的行程助理 Sour。您可以告訴我你想安排的活動，我除了幫您規劃外，還能一鍵幫您產生 **Google 日曆建立事件** 的按鈕喔！
+                    </div>
+                    <div class="mt-2 pt-1 border-t border-gray-100 dark:border-gray-700/40 flex items-center justify-end gap-2 text-xs text-gray-400">
+                        <button onclick="copyText(this, '哈囉！我是您的行程助理 Sour。您可以告訴我你想安排的活動，我除了幫您規劃外，還能一鍵幫您產生 Google 日曆建立事件的按鈕喔！')" class="hover:text-[#A09ABC] p-1" title="複製內容">
+                            <i class="fa-regular fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Attachment Preview Bar -->
+        <div id="attachmentBar" class="hidden px-4 py-2 bg-[#E1DEE9]/40 dark:bg-gray-800/60 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <div class="flex items-center gap-2 overflow-hidden">
+                <i class="fa-solid fa-paperclip text-[#A09ABC]"></i>
+                <span id="attachmentName" class="text-xs truncate text-gray-700 dark:text-gray-300 font-medium">filename.png</span>
+            </div>
+            <button onclick="removeAttachment()" class="text-gray-400 hover:text-red-500 text-xs p-1">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <!-- Input Area -->
+        <div class="p-3 md:p-4 bg-white dark:bg-[#242034] border-t border-gray-200/80 dark:border-gray-700/60 shadow-lg flex-shrink-0">
+            <form id="chatForm" onsubmit="handleSend(event)" class="max-w-4xl mx-auto space-y-2">
+                <div class="flex items-end gap-2 bg-[#F7F5FA] dark:bg-[#181622] p-2 rounded-xl border border-gray-200 dark:border-gray-700 focus-within:border-[#A09ABC] transition">
+                    
+                    <label class="p-2 text-gray-400 hover:text-[#A09ABC] dark:hover:text-purple-300 cursor-pointer transition flex-shrink-0" title="上傳行程截圖或文件">
+                        <i class="fa-solid fa-paperclip text-lg"></i>
+                        <input type="file" id="fileInput" onchange="handleFileSelect(event)" accept="image/*,.pdf,.txt" class="hidden">
+                    </label>
+
+                    <textarea id="userInput" rows="1" placeholder="輸入行程需求，例如：明天下午三點開會..." onkeydown="handleKeyDown(event)" class="w-full bg-transparent outline-none resize-none text-gray-800 dark:text-gray-200 text-sm max-h-32 py-1.5 px-1"></textarea>
+
+                    <button type="button" id="micBtn" onclick="toggleVoiceInput()" class="p-2 text-gray-400 hover:text-[#F4D068] transition flex-shrink-0" title="語音輸入">
+                        <i class="fa-solid fa-microphone text-lg" id="micIcon"></i>
+                    </button>
+
+                    <button type="submit" id="sendBtn" class="bg-[#A09ABC] hover:bg-[#8F89AD] text-white p-2.5 rounded-lg transition flex-shrink-0 shadow-sm flex items-center justify-center w-10 h-10">
+                        <i class="fa-solid fa-paper-plane text-sm"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <!-- Mobile Settings Modal -->
+    <div id="mobileMenuModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-white dark:bg-[#242034] w-full max-w-md rounded-t-2xl sm:rounded-2xl p-5 space-y-4">
+            <div class="flex items-center justify-between border-b pb-3 border-gray-200 dark:border-gray-700">
+                <h3 class="font-bold text-gray-800 dark:text-white">系統設定與日曆捷徑</h3>
+                <button onclick="closeMobileMenu()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            
+            <div class="space-y-3">
+                <a href="https://calendar.google.com" target="_blank" class="w-full flex items-center justify-center gap-2 bg-[#F4D068] text-gray-900 font-semibold py-2.5 px-3 rounded-lg text-xs">
+                    <i class="fa-regular fa-calendar-days"></i> 開啟 Google 日曆
+                </a>
+
+                <div class="flex items-center justify-between text-sm">
+                    <span class="text-gray-700 dark:text-gray-300">回覆語言</span>
+                    <select id="mobileLanguageSelect" onchange="changeLanguage(this.value)" class="bg-gray-100 dark:bg-gray-800 text-xs p-2 rounded text-gray-800 dark:text-white">
+                        <option value="繁體中文">繁體中文</option>
+                        <option value="English">English</option>
+                        <option value="日本語">日本語</option>
+                        <option value="한국어">한국어</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center justify-between text-sm">
+                    <span class="text-gray-700 dark:text-gray-300">文字大小控制</span>
+                    <div class="flex items-center gap-1">
+                        <button onclick="adjustFontSize(-1)" class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">A-</button>
+                        <button onclick="resetFontSize()" class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-xs">重置</button>
+                        <button onclick="adjustFontSize(1)" class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded font-bold">A+</button>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="closeMobileMenu()" class="w-full py-2.5 bg-[#A09ABC] text-white rounded-lg font-medium text-sm">完成</button>
+        </div>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        const CHATPDF_API_KEY = "sec_CPcvxuI0ATlAAZQwWjPpgCVTlU01wZD8";
+        const CHATPDF_SOURCE_ID = "cha_8SGKJ5dGjWQT9OnD13vKN";
+        const API_URL = "https://api.chatpdf.com/v1/chats/message";
+        const ERROR_FALLBACK_PROMPT = "相關問題或系統異常，請稍後再試或電洽客服！";
+
+        let currentLanguage = "繁體中文";
+        let messageHistory = [];
+        let currentFontSize = 15;
+        let isRecording = false;
+        let recognition = null;
+        let attachedFile = null;
+
+        // Auto resize textarea
+        const userInput = document.getElementById('userInput');
+        userInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+
+        function handleKeyDown(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                document.getElementById('chatForm').dispatchEvent(new Event('submit'));
+            }
+        }
+
+        // Initialize Speech Recognition
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'zh-TW';
+
+            recognition.onstart = function() {
+                isRecording = true;
+                updateStatus("請開始講話...", "recording");
+                document.getElementById('micIcon').className = "fa-solid fa-microphone-slash text-red-500";
+                document.getElementById('micBtn').classList.add('recording-pulse');
+            };
+
+            recognition.onresult = function(event) {
+                const transcript = event.results[0][0].transcript;
+                userInput.value = transcript;
+                updateStatus("語音辨識完成，自動傳送中...", "ready");
+                setTimeout(() => {
+                    handleSend(new Event('submit'));
+                }, 400);
+            };
+
+            recognition.onerror = function() {
+                updateStatus("語音辨識失敗，請重試", "ready");
+                stopVoiceInput();
+            };
+
+            recognition.onend = function() {
+                stopVoiceInput();
+            };
+        } else {
+            document.getElementById('micBtn').style.display = 'none';
+        }
+
+        function toggleVoiceInput() {
+            if (!recognition) return;
+            if (isRecording) {
+                recognition.stop();
+                stopVoiceInput();
+            } else {
+                try {
+                    recognition.start();
+                } catch(err) {
+                    stopVoiceInput();
+                }
+            }
+        }
+
+        function stopVoiceInput() {
+            isRecording = false;
+            document.getElementById('micIcon').className = "fa-solid fa-microphone text-lg";
+            document.getElementById('micBtn').classList.remove('recording-pulse');
+            updateStatus("系統就緒", "ready");
+        }
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                attachedFile = file;
+                document.getElementById('attachmentName').innerText = file.name + ` (${(file.size / 1024).toFixed(1)} KB)`;
+                document.getElementById('attachmentBar').classList.remove('hidden');
+                updateStatus(`已載入附件：${file.name}`, "ready");
+            }
+        }
+
+        function removeAttachment() {
+            attachedFile = null;
+            document.getElementById('fileInput').value = "";
+            document.getElementById('attachmentBar').classList.add('hidden');
+            updateStatus("附件已移除", "ready");
+        }
+
+        function updateStatus(text, type = "ready") {
+            const statusText = document.getElementById('statusText');
+            const statusDot = document.getElementById('statusDot');
+            statusText.innerText = text;
+
+            if (type === "recording") {
+                statusDot.className = "w-2 h-2 rounded-full bg-red-500 inline-block animate-ping";
+            } else if (type === "thinking") {
+                statusDot.className = "w-2 h-2 rounded-full bg-yellow-500 inline-block animate-ping";
+            } else {
+                statusDot.className = "w-2 h-2 rounded-full bg-green-500 inline-block";
+            }
+        }
+
+        function sendQuickMessage(text) {
+            userInput.value = text;
+            handleSend(new Event('submit'));
+        }
+
+        async function handleSend(e) {
+            if (e) e.preventDefault();
+            let text = userInput.value.trim();
+            if (!text && !attachedFile) return;
+
+            if (attachedFile) {
+                text += ` [附加檔案: ${attachedFile.name}]`;
+                removeAttachment();
+            }
+
+            const quickBtnContainer = document.getElementById('quickButtonsContainer');
+            if (quickBtnContainer) {
+                quickBtnContainer.style.opacity = '0';
+                setTimeout(() => quickBtnContainer.remove(), 300);
+            }
+
+            appendUserMessage(text);
+            userInput.value = '';
+            userInput.style.height = 'auto';
+
+            messageHistory.push({ role: "user", content: text });
+            if (messageHistory.length > 6) {
+                messageHistory = messageHistory.slice(messageHistory.length - 6);
+            }
+
+            const payloadMessages = messageHistory.map((msg, index) => {
+                if (index === messageHistory.length - 1 && msg.role === 'user') {
+                    return {
+                        role: "user",
+                        content: `[角色指示：請以「Sour」（理性、聰明、善於尋找折衷方案的檸檬助理）的親切口吻回覆，並強制使用【${currentLanguage}】進行回答。如果使用者要求安排時間或會議，請在回覆中精確列出活動名稱、時間與細節。]\n\n使用者需求：${msg.content}`
+                    };
+                }
+                return msg;
+            });
+
+            updateStatus("Sour 正在思考並安排行程...", "thinking");
+            const botMsgId = appendBotThinkingMessage();
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: "POST",
+                    headers: {
+                        "x-api-key": CHATPDF_API_KEY,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        sourceId: CHATPDF_SOURCE_ID,
+                        messages: payloadMessages
+                    })
+                });
+
+                if (!response.ok) throw new Error(`API error code ${response.status}`);
+
+                const data = await response.json();
+                let replyText = data.content || "已收到您的訊息。";
+
+                messageHistory.push({ role: "assistant", content: replyText });
+                updateBotMessage(botMsgId, replyText, text);
+                updateStatus("系統就緒", "ready");
+
+            } catch (err) {
+                console.error(err);
+                updateBotMessage(botMsgId, `${ERROR_FALLBACK_PROMPT}`, text);
+                updateStatus("系統就緒", "ready");
+            }
+        }
+
+        function appendUserMessage(text) {
+            const container = document.getElementById('chatContainer');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = "flex items-start justify-end gap-3 msg-user";
+            
+            const safeText = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+            msgDiv.innerHTML = `
+                <div class="group relative max-w-[85%] md:max-w-[75%] bg-[#A09ABC] text-white p-3.5 rounded-2xl rounded-tr-none shadow-sm">
+                    <div class="font-bold text-xs text-purple-100 mb-1 flex items-center justify-between gap-4">
+                        <span>您</span>
+                    </div>
+                    <div class="message-content leading-relaxed whitespace-pre-wrap">${safeText}</div>
+                    <div class="mt-2 pt-1 border-t border-white/20 flex items-center justify-end gap-2 text-xs text-purple-100">
+                        <button onclick="editUserMessage(this)" class="hover:text-white p-1" title="修改">
+                            <i class="fa-solid fa-pen text-[10px]"></i> 修改
+                        </button>
+                        <button onclick="copyText(this, \`${safeText.replace(/`/g, '\\`')}\`)" class="hover:text-white p-1" title="複製">
+                            <i class="fa-regular fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            container.appendChild(msgDiv);
+            scrollToBottom();
+        }
+
+        function appendBotThinkingMessage() {
+            const container = document.getElementById('chatContainer');
+            const msgId = 'bot-msg-' + Date.now();
+            const msgDiv = document.createElement('div');
+            msgDiv.className = "flex items-start gap-3 msg-assistant";
+            msgDiv.id = msgId;
+
+            msgDiv.innerHTML = `
+                <div class="w-9 h-9 rounded-full bg-[#F4D068] flex items-center justify-center shadow-sm flex-shrink-0 mt-0.5">
+                    <svg width="24" height="24" viewBox="0 0 100 100" fill="none">
+                        <ellipse cx="50" cy="52" rx="42" ry="36" fill="#F4D068" />
+                        <path d="M48 16 Q52 4 64 8 Q56 20 48 16 Z" fill="#7CB342" />
+                        <circle cx="38" cy="48" r="3.5" fill="#2C2C2C" />
+                        <circle cx="62" cy="48" r="3.5" fill="#2C2C2C" />
+                        <path d="M 46 54 Q 50 58 54 54" stroke="#2C2C2C" stroke-width="2.5" stroke-linecap="round" fill="none" />
+                    </svg>
+                </div>
+                <div class="group relative max-w-[85%] md:max-w-[75%] bg-white dark:bg-[#242034] p-3.5 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 dark:border-gray-700/50">
+                    <div class="font-bold text-xs text-[#A09ABC] dark:text-purple-300 mb-1">Sour</div>
+                    <div class="message-content leading-relaxed text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                        <i class="fa-solid fa-circle-notch fa-spin text-[#F4D068]"></i> Sour 思考中...
+                    </div>
+                </div>
+            `;
+            container.appendChild(msgDiv);
+            scrollToBottom();
+            return msgId;
+        }
+
+        function updateBotMessage(msgId, contentText, userQuery) {
+            const msgDiv = document.getElementById(msgId);
+            if (!msgDiv) return;
+
+            const parsedHTML = marked.parse(contentText);
+            
+            msgDiv.querySelector('.message-content').className = "message-content leading-relaxed text-gray-800 dark:text-gray-200";
+            msgDiv.querySelector('.message-content').innerHTML = parsedHTML;
+
+            const bubble = msgDiv.querySelector('.group');
+
+            // --- Google Calendar Integration Widget ---
+            // Automatically generate a Google Calendar quick-add button based on context
+            const now = new Date();
+            const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+            const dateStr = tomorrow.toISOString().replace(/-|:|\.\d\d\d/g, "").slice(0, 8) + "T140000Z";
+            const endDateStr = tomorrow.toISOString().replace(/-|:|\.\d\d\d/g, "").slice(0, 8) + "T150000Z";
+            
+            const eventTitle = encodeURIComponent("Chat Sour 行程規劃: " + (userQuery.length > 15 ? userQuery.slice(0, 15) + "..." : userQuery));
+            const eventDetails = encodeURIComponent(contentText.replace(/<[^>]*>?/gm, '').slice(0, 150));
+            const gCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${eventTitle}&dates=${dateStr}/${endDateStr}&details=${eventDetails}`;
+
+            const calendarWidget = document.createElement('div');
+            calendarWidget.className = "mt-3 p-3 bg-[#F7F5FA] dark:bg-[#181622] rounded-xl border border-[#A09ABC]/30 flex flex-col sm:flex-row items-center justify-between gap-2";
+            calendarWidget.innerHTML = `
+                <div class="flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300">
+                    <i class="fa-solid fa-calendar-check text-[#F4D068] text-base"></i>
+                    <span>需要將此行程同步到您的 Google 日曆嗎？</span>
+                </div>
+                <a href="${gCalendarUrl}" target="_blank" class="w-full sm:w-auto bg-[#F4D068] hover:bg-[#E5C055] text-gray-900 font-bold px-3 py-1.5 rounded-lg text-xs transition flex items-center justify-center gap-1.5 shadow-sm">
+                    <i class="fa-solid fa-plus"></i> 一鍵加入 Google 日曆
+                </a>
+            `;
+            bubble.appendChild(calendarWidget);
+
+            const actionDiv = document.createElement('div');
+            actionDiv.className = "mt-2 pt-1 border-t border-gray-100 dark:border-gray-700/40 flex items-center justify-end gap-2 text-xs text-gray-400";
+            actionDiv.innerHTML = `
+                <button onclick="copyText(this, \`${contentText.replace(/`/g, '\\`')}\`)" class="hover:text-[#A09ABC] p-1" title="複製內容">
+                    <i class="fa-regular fa-copy"></i> 複製
+                </button>
+            `;
+            bubble.appendChild(actionDiv);
+            scrollToBottom();
+        }
+
+        function editUserMessage(btn) {
+            const content = btn.closest('.group').querySelector('.message-content').innerText;
+            userInput.value = content;
+            userInput.focus();
+        }
+
+        function copyText(btn, text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                const origIcon = btn.innerHTML;
+                btn.innerHTML = `<i class="fa-solid fa-check text-green-500"></i> 已複製`;
+                setTimeout(() => { btn.innerHTML = origIcon; }, 1500);
+            } catch (err) {}
+            document.body.removeChild(textarea);
+        }
+
+        function scrollToBottom() {
+            const container = document.getElementById('chatContainer');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function changeLanguage(val) {
+            if (val) {
+                currentLanguage = val;
+                document.getElementById('languageSelect').value = val;
+            } else {
+                currentLanguage = document.getElementById('languageSelect').value;
+            }
+            document.getElementById('mobileLanguageSelect').value = currentLanguage;
+            updateStatus(`已切換語言：${currentLanguage}`, "ready");
+        }
+
+        function toggleDarkMode() {
+            const html = document.documentElement;
+            const isDark = html.classList.toggle('dark');
+            const themeIcon = document.getElementById('themeIcon');
+            const mobileThemeIcon = document.getElementById('mobileThemeIcon');
+            
+            if (isDark) {
+                if (themeIcon) themeIcon.className = "fa-solid fa-sun text-[#A09ABC]";
+                if (mobileThemeIcon) mobileThemeIcon.className = "fa-solid fa-sun text-yellow-400";
+            } else {
+                if (themeIcon) themeIcon.className = "fa-solid fa-moon text-[#A09ABC]";
+                if (mobileThemeIcon) mobileThemeIcon.className = "fa-solid fa-moon text-gray-600";
+            }
+        }
+
+        function adjustFontSize(delta) {
+            currentFontSize = Math.max(12, Math.min(20, currentFontSize + delta));
+            document.getElementById('chatContainer').style.fontSize = currentFontSize + 'px';
+        }
+
+        function resetFontSize() {
+            currentFontSize = 15;
+            document.getElementById('chatContainer').style.fontSize = '15px';
+        }
+
+        function openMobileMenu() {
+            document.getElementById('mobileMenuModal').classList.remove('hidden');
+        }
+
+        function closeMobileMenu() {
+            document.getElementById('mobileMenuModal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
